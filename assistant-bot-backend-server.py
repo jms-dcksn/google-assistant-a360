@@ -26,8 +26,10 @@ app = Flask(__name__)
 
 @app.route('/message_bot', methods=['POST'])
 def msg_bot():
-    #req = request.get_json(silent=True, force=True)
-    deploymentId = Deploy()
+    req = request.get_json(silent=True, force=True)
+    if(req.get("queryResult").get("action") == "ShowMessage"):
+        inputForBot = req.get("queryResult").get("parameters").get("message")
+    deploymentId = Deploy(inputForBot)
     r = createResp(deploymentId)
     return r
     
@@ -44,10 +46,10 @@ def CRauth():
     token = output['token']
     return token
 
-def Deploy():
+def Deploy(botInput):
     token = CRauth()
     crUrl = "https://aa-saleseng-use-2.my.automationanywhere.digital/v3/automations/deploy"
-    data = { "fileId": 8127, "callbackInfo": {}, "runAsUserIds": [366], "poolIds": [42], "overrideDefaultDevice": False}
+    data = { "fileId": 91001, "callbackInfo": {}, "runAsUserIds": [366], "poolIds": [42], "overrideDefaultDevice": False, "botInput": { "sMsg": { "type": "STRING", "string": botInput } }}
     data_json = json.dumps(data)
     headers = {"Content-Type": "application/json", "X-Authorization":token}
     response = requests.post(crUrl, data=data_json, headers=headers)
@@ -81,6 +83,9 @@ def test():
 
 @app.route('/static_reply', methods=['POST'])
 def static_reply():
+    req = request.get_json(silent=True, force=True)
+    print(req.get("queryResult").get("action"))
+    print(req.get("queryResult").get("parameters").get("message"))
     speech = "Processing your request. Your bot has been deployed successfully!"
     string = "You are awesome !!"
     Message = "this is the message"
