@@ -23,14 +23,21 @@ from flask import make_response
 app = Flask(__name__)
 
 
+
 @app.route('/message_bot', methods=['POST'])
 def msg_bot():
     req = request.get_json(silent=True, force=True)
+    
     if(req.get("queryResult").get("action") == "ShowMessage"):
         inputForBot = req.get("queryResult").get("parameters").get("message")
-    deploymentId = Deploy(inputForBot)
-    r = createResp(deploymentId)
-    return r
+        deploymentId = Deploy(inputForBot)
+        r = createResp(deploymentId)
+        return r
+    if(req.get("queryResult").get("action") == "GetStatus"):
+        status = BotStatus()
+        r = createStatusResp(status)
+        return r
+
     
 
 
@@ -56,6 +63,17 @@ def Deploy(botInput):
     deploymentId = output['deploymentId']
     return deploymentId
 
+def BotStatus():
+    token = CRauth()
+    crUrl = "https://aa-saleseng-use-2.my.automationanywhere.digital/v2/activity/list"
+    data = {"sort":[{"field":"startDateTime","direction":"desc"}],"filter": {"operator": "eq", "field": "fileId", "value": 91001}}
+    data_json = json.dumps(data)
+    headers = {"Content-Type": "application/json", "X-Authorization":token}
+    response = requests.post(crUrl, data=data_json, headers=headers)
+    output = response.json()
+    status = output['list'][0]['status']
+    return status
+
 def StartMessageBot():
     deploymentId = Deploy()
     
@@ -74,9 +92,27 @@ def createResp(Id):
     r.headers['Content-Type'] = 'application/json'
     return r
 
+def createStatusResp(status):
+    if status == "UPDATE":
+        speech = "Your bot is still running"
+    else:
+        speech = "Your bot has completed successfully and the message was delivered!"
+    my_result = {
+
+        "fulfillmentText": speech,
+        "source": speech
+    }
+
+    res = json.dumps(my_result, indent=4)
+    r = make_response(res)
+    r.headers['Content-Type'] = 'application/json'
+    return r
+
 
 @app.route('/static_reply', methods=['POST'])
 def static_reply():
+    req = request.get_json(silent=True, force=True)
+    print(req)
     speech = "Processing your request. Your bot has been deployed successfully!"
     string = "You are awesome !!"
     Message = "this is the message"
