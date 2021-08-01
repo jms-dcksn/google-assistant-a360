@@ -1,6 +1,5 @@
 
-# Author - Naresh Ganatra
-# http://youtube.com/c/NareshGanatra
+# Author - James Dickson
 
 
 from __future__ import print_function
@@ -76,16 +75,8 @@ def createResp(Id):
     return r
 
 
-@app.route('/test', methods=['GET'])
-def test():
-    return "Hello there my friend !!"
-
-
 @app.route('/static_reply', methods=['POST'])
 def static_reply():
-    req = request.get_json(silent=True, force=True)
-    print(req.get("queryResult").get("action"))
-    print(req.get("queryResult").get("parameters").get("message"))
     speech = "Processing your request. Your bot has been deployed successfully!"
     string = "You are awesome !!"
     Message = "this is the message"
