@@ -24,13 +24,18 @@ app = Flask(__name__)
 
 
 
-@app.route('/message_bot', methods=['POST'])
+@app.route('/run_bot', methods=['POST'])
 def msg_bot():
     req = request.get_json(silent=True, force=True)
     
-    if(req.get("queryResult").get("action") == "ShowMessage"):
-        inputForBot = req.get("queryResult").get("parameters").get("message")
-        deploymentId = Deploy(inputForBot)
+    if(req.get("queryResult").get("action") == "AbsenceRequest"):
+        name = req.get("queryResult").get("parameters").get("name")
+        startDateEntities = req.get("queryResult").get("parameters").get("dates").get("startDate")[:10].split('-')
+        startDate = startDateEntities[1] + startDateEntities[2] + startDateEntities[0]
+        endDateEntities = req.get("queryResult").get("parameters").get("dates").get("endDate")[:10].split('-')
+        endDate = endDateEntities[1] + endDateEntities[2] + endDateEntities[0]
+        type = req.get("queryResult").get("parameters").get("type")
+        deploymentId = Deploy(startDate, endDate, type)
         r = createResp(deploymentId)
         return r
     if(req.get("queryResult").get("action") == "GetStatus"):
@@ -52,10 +57,10 @@ def CRauth():
     token = output['token']
     return token
 
-def Deploy(botInput):
+def Deploy(startDate, endDate, type):
     token = CRauth()
     crUrl = "https://aa-saleseng-use-2.my.automationanywhere.digital/v3/automations/deploy"
-    data = { "fileId": 91001, "callbackInfo": {}, "runAsUserIds": [366], "poolIds": [42], "overrideDefaultDevice": False, "botInput": { "sMsg": { "type": "STRING", "string": botInput } }}
+    data = { "fileId": 91099, "callbackInfo": {}, "runAsUserIds": [366], "poolIds": [42], "overrideDefaultDevice": False, "botInput": { "startDate": { "type": "STRING", "string": startDate }, "endDate": { "type": "STRING", "string": endDate }, "type": { "type": "STRING", "string": type } }}
     data_json = json.dumps(data)
     headers = {"Content-Type": "application/json", "X-Authorization":token}
     response = requests.post(crUrl, data=data_json, headers=headers)
@@ -66,20 +71,17 @@ def Deploy(botInput):
 def BotStatus():
     token = CRauth()
     crUrl = "https://aa-saleseng-use-2.my.automationanywhere.digital/v2/activity/list"
-    data = {"sort":[{"field":"startDateTime","direction":"desc"}],"filter": {"operator": "eq", "field": "fileId", "value": 91001}}
+    data = {"sort":[{"field":"startDateTime","direction":"desc"}],"filter": {"operator": "eq", "field": "fileId", "value": 91099}}
     data_json = json.dumps(data)
     headers = {"Content-Type": "application/json", "X-Authorization":token}
     response = requests.post(crUrl, data=data_json, headers=headers)
     output = response.json()
     status = output['list'][0]['status']
     return status
-
-def StartMessageBot():
-    deploymentId = Deploy()
     
 
 def createResp(Id):
-    speech = "Processing your request. Your bot has been deployed successfully! Your deployment Id is: " + str(Id)
+    speech = "Processing your request. Your time-off request is being submitted in Workday. Your request Id is: " + str(Id)[:3] + ". Please check back in a few moments for final confirmation. Say or type: check status of my absence request."
 
     my_result = {
 
@@ -94,9 +96,9 @@ def createResp(Id):
 
 def createStatusResp(status):
     if status == "UPDATE":
-        speech = "Your bot is still running"
+        speech = "Your bot is working hard to complete the request in Workday. Please check back in a few moments."
     else:
-        speech = "Your bot has completed successfully and the message was delivered!"
+        speech = "The request has been successfully submitted in Workday for your upcoming absence. Is there anything else I can do for you?"
     my_result = {
 
         "fulfillmentText": speech,
@@ -112,7 +114,6 @@ def createStatusResp(status):
 @app.route('/static_reply', methods=['POST'])
 def static_reply():
     req = request.get_json(silent=True, force=True)
-    print(req)
     speech = "Processing your request. Your bot has been deployed successfully!"
     string = "You are awesome !!"
     Message = "this is the message"
